@@ -5,23 +5,24 @@
 #include <type_traits>
 
 struct Cell {
-    size_t x = 0;
-    size_t y = 0;
+    using varSize = unsigned short int;
+    varSize x = 0;
+    varSize y = 0;
 
     [[nodiscard]] Cell PlusY() const {
-        return {x, y + 1};
+        return {x, static_cast<varSize>(y + 1)};
     }
 
     [[nodiscard]] Cell MinusY() const {
-        return {x, y - 1};
+        return {x, static_cast<varSize>(y - 1)};
     }
 
     [[nodiscard]] Cell PlusX() const {
-        return {x + 1, y};
+        return {static_cast<varSize>(x + 1), y};
     }
 
     [[nodiscard]] Cell MinusX() const {
-        return {x - 1, y};
+        return {static_cast<varSize>(x - 1), y};
     }
 
     auto operator<=>(const Cell&) const = default;
@@ -34,29 +35,29 @@ bool IsValid(const Cell& cell, size_t Width, size_t Height) {
 template<typename... TStates>
 class CellularAutomata {
 public:
-    constexpr CellularAutomata(const size_t Width, const size_t Height) : Width(Width), Height(Height) {
+    constexpr CellularAutomata(const Cell::varSize Width, const Cell::varSize Height) : Width(Width), Height(Height) {
         updatedStates.resize(Width * Height);
         states.resize(Width * Height);
 
         using firstState = std::tuple_element<0, std::tuple<TStates...>>::type;
-        for (size_t y = 0; y < Height; y++) {
-            for (size_t x = 0; x < Width; x++) {
+        for (Cell::varSize y = 0; y < Height; y++) {
+            for (Cell::varSize x = 0; x < Width; x++) {
                 updatedStates.at(GetIndex({x, y})) = firstState{};
                 states.at(GetIndex({x, y})) = firstState{};
             }
         }
     }
 
-    [[nodiscard]] constexpr size_t GetWidth() const {
+    [[nodiscard]] constexpr Cell::varSize GetWidth() const {
         return Width;
     }
 
-    [[nodiscard]] constexpr size_t GetHeight() const {
+    [[nodiscard]] constexpr Cell::varSize GetHeight() const {
         return Height;
     }
 
     void Step() {
-        for (const auto& cell : previouslyModifiedCells) {
+        for (const auto& cell : GetPassiveBuffer()) {
             std::visit([&](auto&& state){
                 state.Process(*this, cell);
             }, states.at(GetIndex(cell)));
@@ -73,15 +74,16 @@ public:
     void Set(const Cell& cell) {
         updatedStates.at(GetIndex(cell)) = TState{};
 
-        modifiedCells.insert(cell);
-        for (int x = -updatedWindowsSize; x <= updatedWindowsSize; x++) {
-            for (int y = -updatedWindowsSize; y <= updatedWindowsSize; y++) {
+        auto& buffer = GetActiveBuffer();
+        buffer.insert(cell);
+        for (int x = -neighborhoodSize; x <= neighborhoodSize; x++) {
+            for (int y = -neighborhoodSize; y <= neighborhoodSize; y++) {
                 if (x == 0 && y == 0) {
                     continue;
                 }
-                Cell newCell = {cell.x + x, cell.y + y};
+                Cell newCell = {static_cast<Cell::varSize>(cell.x + x), static_cast<Cell::varSize>(cell.y + y)};
                 if (IsValid(newCell, Width, Height)) {
-                    modifiedCells.insert(newCell);
+                    buffer.insert(newCell);
                 }
             }
         }
@@ -104,24 +106,34 @@ public:
 
 private:
     void Commit() {
-        for (const auto& cell : modifiedCells) {
+        for (const auto& cell : GetActiveBuffer()) {
             states.at(GetIndex(cell)) = updatedStates.at(GetIndex(cell));
         }
-        previouslyModifiedCells = modifiedCells;
-        modifiedCells.clear();
+        firstBufferActive = !firstBufferActive;
+        GetActiveBuffer().clear();
     }
 
     [[nodiscard]] size_t GetIndex(const Cell& cell) const {
         return cell.x + cell.y * Width;
     }
 
-    const size_t Height = 0;
-    const size_t Width = 0;
+    std::set<Cell>& GetActiveBuffer () {
+        return firstBufferActive ? modifiedCells : previouslyModifiedCells;
+    }
+
+    std::set<Cell>& GetPassiveBuffer () {
+        return firstBufferActive ? previouslyModifiedCells : modifiedCells;
+    }
+
+    const Cell::varSize Height = 0;
+    const Cell::varSize Width = 0;
     std::vector<std::variant<TStates ...>> updatedStates;
     std::vector<std::variant<TStates ...>> states;
 
-    const size_t updatedWindowsSize = 1;
+    const size_t neighborhoodSize = 1;
     std::set<Cell> modifiedCells;
     std::set<Cell> previouslyModifiedCells;
+
+    bool firstBufferActive = true;
 };
 
