@@ -85,7 +85,10 @@ public:
         states.resize(Width * Height);
         modifiedCells.reserve(Width * Height);
         previouslyModifiedCells.reserve(Width * Height);
-
+        changedCells.resize(Width * Height);
+        for (int i = 0; i < changedCells.size(); i++) {
+            changedCells[i]  = false;
+        }
 
         using firstState = std::tuple_element<0, std::tuple<TStates...>>::type;
         for (ShortInt y = 0; y < Height; y++) {
@@ -131,7 +134,11 @@ public:
                 }
                 Cell newCell = {static_cast<ShortInt>(cell.x + x), static_cast<ShortInt>(cell.y + y)};
                 if (IsValid(newCell, Width, Height)) {
+                    if (changedCells.at(GetIndex(newCell))) {
+                        continue;
+                    }
                     buffer.push_back(newCell);
+                    changedCells.at(GetIndex(newCell)) = true;
                 }
             }
         }
@@ -160,6 +167,7 @@ private:
     void Commit() {
         for (const auto& cell : GetActiveBuffer()) {
             states.at(GetIndex(cell)) = updatedStates.at(GetIndex(cell));
+            changedCells.at(GetIndex(cell)) = false;
         }
         firstBufferActive = !firstBufferActive;
         GetActiveBuffer().clear();
@@ -185,6 +193,7 @@ private:
     const size_t neighborhoodSize = 1;
     Buffer modifiedCells;
     Buffer previouslyModifiedCells;
+    std::vector<bool> changedCells;
 
     bool firstBufferActive = true;
 };
