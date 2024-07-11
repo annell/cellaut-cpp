@@ -29,7 +29,7 @@ struct Cell {
     auto operator<=>(const Cell&) const = default;
 };
 
-bool IsValid(const Cell& cell, size_t Width, size_t Height) {
+bool IsValid(Cell cell, ShortInt Width, ShortInt Height) {
     return cell.x >= 0 && cell.x < Width && cell.y >= 0 && cell.y < Height;
 }
 
