@@ -152,6 +152,10 @@ public:
         return false;
     }
 
+    [[nodiscard]] size_t Size() const {
+        return states.size();
+    }
+
 private:
     void Commit() {
         for (const auto& cell : GetActiveBuffer()) {

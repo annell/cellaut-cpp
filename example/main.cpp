@@ -1,6 +1,7 @@
 #include <iostream>
 #include "SFML/Graphics/RenderWindow.hpp"
 #include "SFML/Graphics/RectangleShape.hpp"
+#include "SFML/Graphics/VertexBuffer.hpp"
 #include "SFML/Window/Event.hpp"
 #include <cellaut-cpp/CellularAutomata.h>
 #include "Controls.h"
@@ -265,48 +266,73 @@ int main() {
             automata.Step();
             auto end = std::chrono::high_resolution_clock::now();
             auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
-            //std::cout << "Step time: " << duration.count() << " microseconds\n";
+            std::cout << "Step time: " << duration.count() << " microseconds\n";
         }
 
         {
             auto start = std::chrono::high_resolution_clock::now();
             sfmlWin.clear(sf::Color(173, 216, 230));
+            std::vector<sf::Vertex> cells;
+            static size_t cellsNr = 0;
+            cells.reserve(cellsNr);
+            int index = 0;
             for (ShortInt y = 0; y < automata.GetHeight(); y++) {
                 for (ShortInt x = 0; x < automata.GetWidth(); x++) {
                     if (automata.template IsAt<Air>({x, y})) {
                         continue;
                     }
-                    sf::RectangleShape cell({static_cast<float>(height) / static_cast<float>(automata.GetHeight()), static_cast<float>(width) / static_cast<float>(automata.GetWidth())});
-                    cell.setPosition(static_cast<float>(x * height) / static_cast<float>(automata.GetHeight()), static_cast<float>(y * width) / static_cast<float>(automata.GetWidth()));
+                    cells.emplace_back(sf::Vector2f(static_cast<float>(x * height) / static_cast<float>(automata.GetHeight()), static_cast<float>(y * width) / static_cast<float>(automata.GetWidth())));
+                    cells.emplace_back(sf::Vector2f(static_cast<float>((x + 1) * height) / static_cast<float>(automata.GetHeight()), static_cast<float>(y * width) / static_cast<float>(automata.GetWidth())));
+                    cells.emplace_back(sf::Vector2f(static_cast<float>((x + 1) * height) / static_cast<float>(automata.GetHeight()), static_cast<float>((y + 1) * width) / static_cast<float>(automata.GetWidth())));
+                    cells.emplace_back(sf::Vector2f(static_cast<float>(x * height) / static_cast<float>(automata.GetHeight()), static_cast<float>((y + 1) * width) / static_cast<float>(automata.GetWidth())));
 
                     if (automata.template IsAt<Sand>({x, y})) {
-                        cell.setFillColor(sf::Color::Yellow);
+                        cells[index + 0].color = sf::Color::Yellow;
+                        cells[index + 1].color = sf::Color::Yellow;
+                        cells[index + 2].color = sf::Color::Yellow;
+                        cells[index + 3].color = sf::Color::Yellow;
                     }
                     else if (automata.template IsAt<Dirt>({x, y})) {
-                        sf::Color brown = sf::Color(139, 69, 19);
-                        cell.setFillColor(brown);
+                        static sf::Color brown = sf::Color(139, 69, 19);
+                        cells[index + 0].color = brown;
+                        cells[index + 1].color = brown;
+                        cells[index + 2].color = brown;
+                        cells[index + 3].color = brown;
                     }
                     else if (automata.template IsAt<Grass>({x, y})) {
-                        cell.setFillColor(sf::Color::Green);
+                        cells[index + 0].color = sf::Color::Green;
+                        cells[index + 1].color = sf::Color::Green;
+                        cells[index + 2].color = sf::Color::Green;
+                        cells[index + 3].color = sf::Color::Green;
                     }
                     else if (automata.template IsAt<Water>({x, y})) {
-                        cell.setFillColor(sf::Color::Blue);
+                        cells[index + 0].color = sf::Color::Blue;
+                        cells[index + 1].color = sf::Color::Blue;
+                        cells[index + 2].color = sf::Color::Blue;
+                        cells[index + 3].color = sf::Color::Blue;
                     }
                     else if (automata.template IsAt<Stone>({x, y})) {
-                        sf::Color gray = sf::Color(128, 128, 128);
-                        cell.setFillColor(gray);
+                        static sf::Color gray = sf::Color(128, 128, 128);
+                        cells[index + 0].color = gray;
+                        cells[index + 1].color = gray;
+                        cells[index + 2].color = gray;
+                        cells[index + 3].color = gray;
                     }
                     else if (automata.template IsAt<Fire>({x, y})) {
-                        cell.setFillColor(sf::Color::Red);
+                        cells[index + 0].color = sf::Color::Red;
+                        cells[index + 1].color = sf::Color::Red;
+                        cells[index + 2].color = sf::Color::Red;
+                        cells[index + 3].color = sf::Color::Red;
                     }
-
-                    sfmlWin.draw(cell);
+                    index += 4;
                 }
             }
+            sfmlWin.draw(&cells[0], cells.size(), sf::Quads);
             sfmlWin.display();
+            cellsNr = cells.size();
             auto end = std::chrono::high_resolution_clock::now();
             auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
-            //std::cout << "Rendering time: " << duration.count() << " ms\n";
+            std::cout << "Rendering time: " << duration.count() << " ms\n";
         }
     }
     return 0;
