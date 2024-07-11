@@ -4,25 +4,26 @@
 #include <vector>
 #include <type_traits>
 
+using ShortInt = unsigned short int;
+
 struct Cell {
-    using varSize = unsigned short int;
-    varSize x = 0;
-    varSize y = 0;
+    ShortInt x = 0;
+    ShortInt y = 0;
 
     [[nodiscard]] Cell PlusY() const {
-        return {x, static_cast<varSize>(y + 1)};
+        return {x, static_cast<ShortInt>(y + 1)};
     }
 
     [[nodiscard]] Cell MinusY() const {
-        return {x, static_cast<varSize>(y - 1)};
+        return {x, static_cast<ShortInt>(y - 1)};
     }
 
     [[nodiscard]] Cell PlusX() const {
-        return {static_cast<varSize>(x + 1), y};
+        return {static_cast<ShortInt>(x + 1), y};
     }
 
     [[nodiscard]] Cell MinusX() const {
-        return {static_cast<varSize>(x - 1), y};
+        return {static_cast<ShortInt>(x - 1), y};
     }
 
     auto operator<=>(const Cell&) const = default;
@@ -32,27 +33,74 @@ bool IsValid(const Cell& cell, size_t Width, size_t Height) {
     return cell.x >= 0 && cell.x < Width && cell.y >= 0 && cell.y < Height;
 }
 
+template <typename TAutomata>
+class Neighborhood {
+public:
+    enum Neighbor {
+        TopLeft = 0,
+        Top = 1,
+        TopRight = 2,
+        Left = 3,
+        Right = 4,
+        BottomLeft = 5,
+        Bottom = 6,
+        BottomRight = 7
+    };
+
+    Neighborhood(const Cell& baseCell) : baseCell(baseCell) {}
+
+    [[nodiscard]] Cell GetNeighbor(Neighbor neighbor) const {
+        switch (neighbor) {
+            case TopLeft:
+                return baseCell.MinusX().MinusY();
+            case Top:
+                return baseCell.MinusY();
+            case TopRight:
+                return baseCell.PlusX().MinusY();
+            case Left:
+                return baseCell.MinusX();
+            case Right:
+                return baseCell.PlusX();
+            case BottomLeft:
+                return baseCell.MinusX().PlusY();
+            case Bottom:
+                return baseCell.PlusY();
+            case BottomRight:
+                return baseCell.PlusX().PlusY();
+        }
+    }
+
+private:
+    Cell baseCell;
+    TAutomata& automata;
+};
+
 template<typename... TStates>
 class CellularAutomata {
+private:
+    using Buffer = std::vector<Cell>;
 public:
-    constexpr CellularAutomata(const Cell::varSize Width, const Cell::varSize Height) : Width(Width), Height(Height) {
+    constexpr CellularAutomata(const ShortInt Width, const ShortInt Height) : Width(Width), Height(Height) {
         updatedStates.resize(Width * Height);
         states.resize(Width * Height);
+        modifiedCells.reserve(Width * Height);
+        previouslyModifiedCells.reserve(Width * Height);
+
 
         using firstState = std::tuple_element<0, std::tuple<TStates...>>::type;
-        for (Cell::varSize y = 0; y < Height; y++) {
-            for (Cell::varSize x = 0; x < Width; x++) {
+        for (ShortInt y = 0; y < Height; y++) {
+            for (ShortInt x = 0; x < Width; x++) {
                 updatedStates.at(GetIndex({x, y})) = firstState{};
                 states.at(GetIndex({x, y})) = firstState{};
             }
         }
     }
 
-    [[nodiscard]] constexpr Cell::varSize GetWidth() const {
+    [[nodiscard]] constexpr ShortInt GetWidth() const {
         return Width;
     }
 
-    [[nodiscard]] constexpr Cell::varSize GetHeight() const {
+    [[nodiscard]] constexpr ShortInt GetHeight() const {
         return Height;
     }
 
@@ -75,15 +123,15 @@ public:
         updatedStates.at(GetIndex(cell)) = TState{};
 
         auto& buffer = GetActiveBuffer();
-        buffer.insert(cell);
+        buffer.push_back(cell);
         for (int x = -neighborhoodSize; x <= neighborhoodSize; x++) {
             for (int y = -neighborhoodSize; y <= neighborhoodSize; y++) {
                 if (x == 0 && y == 0) {
                     continue;
                 }
-                Cell newCell = {static_cast<Cell::varSize>(cell.x + x), static_cast<Cell::varSize>(cell.y + y)};
+                Cell newCell = {static_cast<ShortInt>(cell.x + x), static_cast<ShortInt>(cell.y + y)};
                 if (IsValid(newCell, Width, Height)) {
-                    buffer.insert(newCell);
+                    buffer.push_back(newCell);
                 }
             }
         }
@@ -117,22 +165,22 @@ private:
         return cell.x + cell.y * Width;
     }
 
-    std::set<Cell>& GetActiveBuffer () {
+    Buffer& GetActiveBuffer () {
         return firstBufferActive ? modifiedCells : previouslyModifiedCells;
     }
 
-    std::set<Cell>& GetPassiveBuffer () {
+    Buffer& GetPassiveBuffer () {
         return firstBufferActive ? previouslyModifiedCells : modifiedCells;
     }
 
-    const Cell::varSize Height = 0;
-    const Cell::varSize Width = 0;
+    const ShortInt Height = 0;
+    const ShortInt Width = 0;
     std::vector<std::variant<TStates ...>> updatedStates;
     std::vector<std::variant<TStates ...>> states;
 
     const size_t neighborhoodSize = 1;
-    std::set<Cell> modifiedCells;
-    std::set<Cell> previouslyModifiedCells;
+    Buffer modifiedCells;
+    Buffer previouslyModifiedCells;
 
     bool firstBufferActive = true;
 };

@@ -53,8 +53,8 @@ struct Air {
     void Process(auto&, const Cell&) {}
 };
 double generateRandomNumber() {
-    std::random_device rd;
-    std::mt19937 gen(rd());
+    static std::random_device rd;
+    static std::mt19937 gen(rd());
     std::uniform_real_distribution<> dis(0, 1);
     return dis(gen);
 }
@@ -117,17 +117,17 @@ struct Water {
                 return;
             }
             if (nextX < automata.GetWidth() && !stopRight) {
-                if (automata.template SwapIfTargetIs<Air>(cell, {static_cast<Cell::varSize>(nextX), static_cast<Cell::varSize>(nextY)})) {
+                if (automata.template SwapIfTargetIs<Air>(cell, {static_cast<ShortInt>(nextX), static_cast<ShortInt>(nextY)})) {
                     return;
-                } else if (!automata.template IsAt<Water>({static_cast<Cell::varSize>(nextX), static_cast<Cell::varSize>(nextY)})) {
+                } else if (!automata.template IsAt<Water>({static_cast<ShortInt>(nextX), static_cast<ShortInt>(nextY)})) {
                     stopRight = true;
                 }
             }
 
             if (prevX > 0 && !stopLeft) {
-                if (automata.template SwapIfTargetIs<Air>(cell, {static_cast<Cell::varSize>(prevX), static_cast<Cell::varSize>(nextY)})) {
+                if (automata.template SwapIfTargetIs<Air>(cell, {static_cast<ShortInt>(prevX), static_cast<ShortInt>(nextY)})) {
                     return;
-                } else if (!automata.template IsAt<Water>({static_cast<Cell::varSize>(prevX), static_cast<Cell::varSize>(nextY)})) {
+                } else if (!automata.template IsAt<Water>({static_cast<ShortInt>(prevX), static_cast<ShortInt>(nextY)})) {
                     stopLeft = true;
                 }
             }
@@ -156,7 +156,7 @@ enum class WorldType {
 void buildWorld(auto& automata) {
     for (size_t y = 0; y < automata.GetHeight(); y++) {
         for (size_t x = 0; x < automata.GetWidth(); x++) {
-            automata.template Set<Air>({static_cast<Cell::varSize>(x), static_cast<Cell::varSize>(y)});
+            automata.template Set<Air>({static_cast<ShortInt>(x), static_cast<ShortInt>(y)});
         }
     }
     automata.Step();
@@ -168,7 +168,7 @@ int main() {
     sf::RenderWindow sfmlWin(sf::VideoMode(width, height),
                              "Cellular Automata Simulation");
     using CellularAutomataT = CellularAutomata<Air, Water, Sand, Dirt, Grass, Stone, Fire>;
-    CellularAutomataT automata(static_cast<Cell::varSize>(width), static_cast<Cell::varSize>(height));
+    CellularAutomataT automata(static_cast<ShortInt>(width), static_cast<ShortInt>(height));
     Controls controls;
     WorldType blockSelected = WorldType::Sand;
     bool addBlocks = false;
@@ -206,37 +206,37 @@ int main() {
         controls.HandleEvents(sfmlWin);
 
         if (true) {
-            automata.Set<Sand>({static_cast<Cell::varSize>(automata.GetWidth() / 3), 0});
-            automata.Set<Water>({static_cast<Cell::varSize>(automata.GetWidth() * 2 / 3), 0});
+            automata.Set<Sand>({static_cast<ShortInt>(automata.GetWidth() / 3), 0});
+            automata.Set<Water>({static_cast<ShortInt>(automata.GetWidth() * 2 / 3), 0});
 
-            automata.Set<Sand>({static_cast<Cell::varSize>(automata.GetWidth() / 3 + 1), 0});
-            automata.Set<Water>({static_cast<Cell::varSize>(automata.GetWidth() * 2 / 3 + 1), 0});
+            automata.Set<Sand>({static_cast<ShortInt>(automata.GetWidth() / 3 + 1), 0});
+            automata.Set<Water>({static_cast<ShortInt>(automata.GetWidth() * 2 / 3 + 1), 0});
 
-            automata.Set<Sand>({static_cast<Cell::varSize>(automata.GetWidth() / 3 + 2), 0});
-            automata.Set<Water>({static_cast<Cell::varSize>(automata.GetWidth() * 2 / 3 + 2), 0});
+            automata.Set<Sand>({static_cast<ShortInt>(automata.GetWidth() / 3 + 2), 0});
+            automata.Set<Water>({static_cast<ShortInt>(automata.GetWidth() * 2 / 3 + 2), 0});
 
-            automata.Set<Sand>({static_cast<Cell::varSize>(automata.GetWidth() / 3 + 3), 0});
-            automata.Set<Water>({static_cast<Cell::varSize>(automata.GetWidth() * 2 / 3 + 3), 0});
+            automata.Set<Sand>({static_cast<ShortInt>(automata.GetWidth() / 3 + 3), 0});
+            automata.Set<Water>({static_cast<ShortInt>(automata.GetWidth() * 2 / 3 + 3), 0});
 
-            automata.Set<Sand>({static_cast<Cell::varSize>(automata.GetWidth() / 3 + 4), 0});
-            automata.Set<Water>({static_cast<Cell::varSize>(automata.GetWidth() * 2 / 3 + 4), 0});
+            automata.Set<Sand>({static_cast<ShortInt>(automata.GetWidth() / 3 + 4), 0});
+            automata.Set<Water>({static_cast<ShortInt>(automata.GetWidth() * 2 / 3 + 4), 0});
 
-            automata.Set<Sand>({static_cast<Cell::varSize>(automata.GetWidth() / 3 - 1), 0});
-            automata.Set<Water>({static_cast<Cell::varSize>(automata.GetWidth() * 2 / 3 - 1), 0});
+            automata.Set<Sand>({static_cast<ShortInt>(automata.GetWidth() / 3 - 1), 0});
+            automata.Set<Water>({static_cast<ShortInt>(automata.GetWidth() * 2 / 3 - 1), 0});
 
-            automata.Set<Sand>({static_cast<Cell::varSize>(automata.GetWidth() / 3 - 2), 0});
-            automata.Set<Water>({static_cast<Cell::varSize>(automata.GetWidth() * 2 / 3 - 2), 0});
+            automata.Set<Sand>({static_cast<ShortInt>(automata.GetWidth() / 3 - 2), 0});
+            automata.Set<Water>({static_cast<ShortInt>(automata.GetWidth() * 2 / 3 - 2), 0});
 
-            automata.Set<Sand>({static_cast<Cell::varSize>(automata.GetWidth() / 3 - 3), 0});
-            automata.Set<Water>({static_cast<Cell::varSize>(automata.GetWidth() * 2 / 3 - 3), 0});
+            automata.Set<Sand>({static_cast<ShortInt>(automata.GetWidth() / 3 - 3), 0});
+            automata.Set<Water>({static_cast<ShortInt>(automata.GetWidth() * 2 / 3 - 3), 0});
 
-            automata.Set<Sand>({static_cast<Cell::varSize>(automata.GetWidth() / 3 - 4), 0});
-            automata.Set<Water>({static_cast<Cell::varSize>(automata.GetWidth() * 2 / 3 - 4), 0});
+            automata.Set<Sand>({static_cast<ShortInt>(automata.GetWidth() / 3 - 4), 0});
+            automata.Set<Water>({static_cast<ShortInt>(automata.GetWidth() * 2 / 3 - 4), 0});
         }
         if (addBlocks) {
             sf::Vector2i mousePos = sf::Mouse::getPosition(sfmlWin);
-            Cell::varSize x = mousePos.x / (width / automata.GetWidth());
-            Cell::varSize y = mousePos.y / (height / automata.GetHeight());
+            ShortInt x = mousePos.x / (width / automata.GetWidth());
+            ShortInt y = mousePos.y / (height / automata.GetHeight());
             switch (blockSelected) {
                 case WorldType::Sand:
                     automata.Set<Sand>({x, y});
@@ -271,8 +271,8 @@ int main() {
         {
             auto start = std::chrono::high_resolution_clock::now();
             sfmlWin.clear(sf::Color(173, 216, 230));
-            for (Cell::varSize y = 0; y < automata.GetHeight(); y++) {
-                for (Cell::varSize x = 0; x < automata.GetWidth(); x++) {
+            for (ShortInt y = 0; y < automata.GetHeight(); y++) {
+                for (ShortInt x = 0; x < automata.GetWidth(); x++) {
                     if (automata.template IsAt<Air>({x, y})) {
                         continue;
                     }
