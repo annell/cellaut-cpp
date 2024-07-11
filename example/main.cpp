@@ -164,8 +164,8 @@ void buildWorld(auto& automata) {
 }
 
 int main() {
-    size_t width = 2000;
-    size_t height = 1200;
+    size_t width = 500;
+    size_t height = 300;
     sf::RenderWindow sfmlWin(sf::VideoMode(width, height),
                              "Cellular Automata Simulation");
     using CellularAutomataT = CellularAutomata<Air, Water, Sand, Dirt, Grass, Stone, Fire>;
@@ -207,7 +207,7 @@ int main() {
         controls.HandleEvents(sfmlWin);
 
         if (true) {
-            for (size_t i = 0; i < 20; i++) {
+            for (size_t i = 0; i < 50; i++) {
                 automata.Set<Sand>({static_cast<ShortInt>(automata.GetWidth() / 3 + i), 0});
                 automata.Set<Water>({static_cast<ShortInt>(automata.GetWidth() * 2 / 3 + i), 0});
 
