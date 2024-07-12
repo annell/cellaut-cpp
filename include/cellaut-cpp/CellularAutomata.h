@@ -118,7 +118,7 @@ public:
 
     template<typename TState>
     [[nodiscard]] bool IsAt(const Cell& cell) const {
-        return std::get_if<TState>(&states.at(GetIndex(cell))) != nullptr;
+        return IsValid(cell, GetWidth(), GetHeight()) && std::get_if<TState>(&states.at(GetIndex(cell))) != nullptr;
     }
 
     template<typename TState>
@@ -134,11 +134,10 @@ public:
                 }
                 Cell newCell = {static_cast<ShortInt>(cell.x + x), static_cast<ShortInt>(cell.y + y)};
                 if (IsValid(newCell, Width, Height)) {
-                    if (changedCells.at(GetIndex(newCell))) {
-                        continue;
+                    if (!changedCells.at(GetIndex(newCell))) {
+                        buffer.push_back(newCell);
+                        changedCells.at(GetIndex(newCell)) = true;
                     }
-                    buffer.push_back(newCell);
-                    changedCells.at(GetIndex(newCell)) = true;
                 }
             }
         }

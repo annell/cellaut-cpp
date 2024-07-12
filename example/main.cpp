@@ -155,17 +155,32 @@ enum class WorldType {
 };
 
 void buildWorld(auto& automata) {
-    for (size_t y = 0; y < automata.GetHeight(); y++) {
-        for (size_t x = 0; x < automata.GetWidth(); x++) {
-            automata.template Set<Air>({static_cast<ShortInt>(x), static_cast<ShortInt>(y)});
+    for (size_t y = 1; y < automata.GetHeight() - 1; y++) {
+        for (size_t x = 1; x < automata.GetWidth() - 1; x++) {
+            auto val = generateRandomNumber();
+            if (val > 0.8 /* Set to 0 to have a clean slate */) {
+                automata.template Set<Air>({static_cast<ShortInt>(x), static_cast<ShortInt>(y)});
+            }
+            else if (val > 0.6) {
+                automata.template Set<Water>({static_cast<ShortInt>(x), static_cast<ShortInt>(y)});
+            }
+            else if (val > 0.3) {
+                automata.template Set<Dirt>({static_cast<ShortInt>(x), static_cast<ShortInt>(y)});
+            }
+            else if (val > 0.1) {
+                automata.template Set<Sand>({static_cast<ShortInt>(x), static_cast<ShortInt>(y)});
+            }
+            else if (val > 0.05) {
+                automata.template Set<Stone>({static_cast<ShortInt>(x), static_cast<ShortInt>(y)});
+            }
         }
     }
     automata.Step();
 }
 
 int main() {
-    size_t width = 500;
-    size_t height = 300;
+    size_t width = 3000;
+    size_t height = 1200;
     sf::RenderWindow sfmlWin(sf::VideoMode(width, height),
                              "Cellular Automata Simulation");
     using CellularAutomataT = CellularAutomata<Air, Water, Sand, Dirt, Grass, Stone, Fire>;
@@ -206,7 +221,7 @@ int main() {
     while (sfmlWin.isOpen()) {
         controls.HandleEvents(sfmlWin);
 
-        if (true) {
+        if (false /* Points pouring in */) {
             for (size_t i = 0; i < 50; i++) {
                 automata.Set<Sand>({static_cast<ShortInt>(automata.GetWidth() / 3 + i), 0});
                 automata.Set<Water>({static_cast<ShortInt>(automata.GetWidth() * 2 / 3 + i), 0});
@@ -246,8 +261,8 @@ int main() {
             auto start = std::chrono::high_resolution_clock::now();
             automata.Step();
             auto end = std::chrono::high_resolution_clock::now();
-            auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
-            std::cout << "Step time: " << duration.count() << " microseconds\n";
+            auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
+            std::cout << "Step time: " << duration.count() << " ms\n";
         }
 
         {
@@ -265,7 +280,7 @@ int main() {
                         color = sf::Color::Yellow;
                     }
                     else if (automata.template IsAt<Dirt>(cell)) {
-                        static sf::Color brown = sf::Color(139, 69, 19);
+                        static const sf::Color brown = sf::Color(139, 69, 19);
                         color = brown;
                     }
                     else if (automata.template IsAt<Grass>(cell)) {
@@ -275,7 +290,7 @@ int main() {
                         color = sf::Color::Blue;
                     }
                     else if (automata.template IsAt<Stone>(cell)) {
-                        static sf::Color gray = sf::Color(128, 128, 128);
+                        static const sf::Color gray = sf::Color(128, 128, 128);
                         color = gray;
                     }
                     else if (automata.template IsAt<Fire>(cell)) {
