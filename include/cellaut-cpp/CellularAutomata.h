@@ -29,56 +29,60 @@ struct Cell {
     auto operator<=>(const Cell&) const = default;
 };
 
-bool IsValid(Cell cell, ShortInt Width, ShortInt Height) {
-    return cell.x >= 0 && cell.x < Width && cell.y >= 0 && cell.y < Height;
-}
-
-template <typename TAutomata>
-class Neighborhood {
-public:
-    enum Neighbor {
-        TopLeft = 0,
-        Top = 1,
-        TopRight = 2,
-        Left = 3,
-        Right = 4,
-        BottomLeft = 5,
-        Bottom = 6,
-        BottomRight = 7
-    };
-
-    Neighborhood(const Cell& baseCell) : baseCell(baseCell) {}
-
-    [[nodiscard]] Cell GetNeighbor(Neighbor neighbor) const {
-        switch (neighbor) {
-            case TopLeft:
-                return baseCell.MinusX().MinusY();
-            case Top:
-                return baseCell.MinusY();
-            case TopRight:
-                return baseCell.PlusX().MinusY();
-            case Left:
-                return baseCell.MinusX();
-            case Right:
-                return baseCell.PlusX();
-            case BottomLeft:
-                return baseCell.MinusX().PlusY();
-            case Bottom:
-                return baseCell.PlusY();
-            case BottomRight:
-                return baseCell.PlusX().PlusY();
-        }
-    }
-
-private:
-    Cell baseCell;
-    TAutomata& automata;
+template <typename TState, typename TNeighborhood>
+concept State = requires(TState state, TNeighborhood neighborhood) {
+    { state.Process(neighborhood) };
 };
 
 template<typename... TStates>
 class CellularAutomata {
 private:
-    using Buffer = std::vector<Cell>;
+    using TAutomata = CellularAutomata<TStates...>;
+
+    class Neighborhood {
+    public:
+        Neighborhood(const Cell& cell, TAutomata& automata) : centerCell(cell), automata(automata) {}
+        Neighborhood(const Neighborhood&) = delete;
+        Neighborhood& operator=(const Neighborhood&) = delete;
+        Neighborhood(Neighborhood&&) = delete;
+        Neighborhood& operator=(Neighborhood&&) = delete;
+
+        const Cell& GetCenter() const {
+            return centerCell;
+        }
+
+        template<State<Neighborhood> TState>
+        void Set() {
+            automata.template Set<TState>(GetCenter());
+        }
+
+        template<State<Neighborhood> TState>
+        [[nodiscard]] bool IsAt(const Cell& cell) const {
+            return automata.template IsAt<TState>(cell);
+        }
+
+        [[nodiscard]] bool IsValid(const Cell& cell) const {
+            return automata.IsValid(cell);
+        }
+
+        template <State<Neighborhood> TTargetState>
+        [[nodiscard]] bool SwapIfTargetIs(const Cell& target) {
+            return automata.template SwapIfTargetIs<TTargetState>(GetCenter(), target);
+        }
+
+       ShortInt GetWidth() const {
+           return automata.GetWidth();
+       }
+
+       ShortInt GetHeight() const {
+           return automata.GetHeight();
+       }
+
+    private:
+        TAutomata& automata;
+        const Cell& centerCell;
+    };
+
 public:
     constexpr CellularAutomata(const ShortInt Width, const ShortInt Height) : Width(Width), Height(Height) {
         updatedStates.resize(Width * Height);
@@ -110,18 +114,19 @@ public:
     void Step() {
         for (const auto& cell : GetPassiveBuffer()) {
             std::visit([&](auto&& state){
-                state.Process(*this, cell);
+                Neighborhood neighborhood(cell, *this);
+                state.Process(neighborhood);
             }, states.at(GetIndex(cell)));
         }
         Commit();
     }
 
-    template<typename TState>
+    template<State<Neighborhood> TState>
     [[nodiscard]] bool IsAt(const Cell& cell) const {
-        return IsValid(cell, GetWidth(), GetHeight()) && std::get_if<TState>(&states.at(GetIndex(cell))) != nullptr;
+        return IsValid(cell) && std::get_if<TState>(&states.at(GetIndex(cell))) != nullptr;
     }
 
-    template<typename TState>
+    template<State<Neighborhood> TState>
     void Set(const Cell& cell) {
         updatedStates.at(GetIndex(cell)) = TState{};
 
@@ -133,17 +138,18 @@ public:
                     continue;
                 }
                 Cell newCell = {static_cast<ShortInt>(cell.x + x), static_cast<ShortInt>(cell.y + y)};
-                if (IsValid(newCell, Width, Height)) {
-                    if (!changedCells.at(GetIndex(newCell))) {
-                        buffer.push_back(newCell);
-                        changedCells.at(GetIndex(newCell)) = true;
-                    }
+                if (!IsValid(newCell)) {
+                    continue;
+                }
+                if (!changedCells.at(GetIndex(newCell))) {
+                    buffer.push_back(newCell);
+                    changedCells.at(GetIndex(newCell)) = true;
                 }
             }
         }
     }
 
-    template <typename TTargetState>
+    template <State<Neighborhood> TTargetState>
     bool SwapIfTargetIs(const Cell& from, const Cell& target) {
         if (IsAt<TTargetState>(target)) {
             auto setState = [&](const Cell& cell1, const Cell& cell2) {
@@ -162,6 +168,10 @@ public:
         return states.size();
     }
 
+    [[nodiscard]] bool IsValid(const Cell& cell) const {
+        return cell.x >= 0 && cell.x < Width && cell.y >= 0 && cell.y < Height;
+    }
+
 private:
     void Commit() {
         for (const auto& cell : GetActiveBuffer()) {
@@ -176,6 +186,7 @@ private:
         return cell.x + cell.y * Width;
     }
 
+    using Buffer = std::vector<Cell>;
     Buffer& GetActiveBuffer () {
         return firstBufferActive ? modifiedCells : previouslyModifiedCells;
     }

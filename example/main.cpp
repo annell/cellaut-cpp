@@ -17,26 +17,30 @@ struct Fire;
 
 
 struct Sand {
-    void Process(auto& automata, const Cell& cell) {
-        if (cell.y + 1 >= automata.GetHeight()) {
+    void Process(auto& neighborhood) {
+        const auto& cell = neighborhood.GetCenter();
+        if (!neighborhood.IsValid(cell.PlusY())) {
             return;
         }
 
-        if (automata.template SwapIfTargetIs<Air>(cell, cell.PlusY())) {
+        if (neighborhood.template SwapIfTargetIs<Air>(cell.PlusY())) {
             return;
         }
 
-        if (automata.template IsAt<Water>(cell.PlusY())) {
-        automata.template Set<Dirt>(cell.PlusY());
-        automata.template Set<Air>(cell);
-        return;
-        }
-
-        if (cell.x + 1 >= automata.GetWidth()) {
+        if (neighborhood.template IsAt<Water>(cell.PlusY())) {
+            neighborhood.template Set<Dirt>();
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wunused-result"
+            neighborhood.template SwapIfTargetIs<Water>(cell.PlusY());
+#pragma clang diagnostic pop
             return;
         }
 
-        if (automata.template SwapIfTargetIs<Air>(cell, cell.PlusY().PlusX())) {
+        if (cell.x + 1 >= neighborhood.GetWidth()) {
+            return;
+        }
+
+        if (neighborhood.template SwapIfTargetIs<Air>(cell.PlusY().PlusX())) {
             return;
         }
 
@@ -44,14 +48,14 @@ struct Sand {
             return;
         }
 
-        if (automata.template SwapIfTargetIs<Air>(cell, cell.MinusX().PlusY())) {
+        if (neighborhood.template SwapIfTargetIs<Air>(cell.MinusX().PlusY())) {
             return;
         }
     }
 
 };
 struct Air {
-    void Process(auto&, const Cell&) {}
+    void Process(auto&) {}
 };
 double generateRandomNumber() {
     static std::random_device rd;
@@ -61,35 +65,37 @@ double generateRandomNumber() {
 }
 
 struct Dirt {
-    void Process(auto& automata, const Cell& cell) {
-        if (cell.y + 1 >= automata.GetHeight()) {
+    void Process(auto& neighborhood) {
+        const auto& cell = neighborhood.GetCenter();
+        if (!neighborhood.IsValid(cell.PlusY())) {
             return;
         }
 
-        if (automata.template SwapIfTargetIs<Air>(cell, cell.PlusY())) {
+        if (neighborhood.template SwapIfTargetIs<Air>(cell.PlusY())) {
             return;
         }
 
-        if (automata.template IsAt<Dirt>(cell.PlusY()) &&
-            automata.template IsAt<Air>(cell.MinusY())) {
+        if (neighborhood.template IsAt<Dirt>(cell.PlusY()) &&
+            neighborhood.template IsAt<Air>(cell.MinusY())) {
             if (generateRandomNumber() < 0.001) {
-                automata.template Set<Grass>(cell);
+                neighborhood.template Set<Grass>();
             }
             return;
         }
 
-        if (automata.template SwapIfTargetIs<Water>(cell, cell.PlusY())) {
+        if (neighborhood.template SwapIfTargetIs<Water>(cell.PlusY())) {
             return;
         }
     }
 };
 struct Grass {
-    void Process(auto& automata, const Cell& cell) {
-        if (cell.y + 1 >= automata.GetHeight()) {
+    void Process(auto& neighborhood) {
+        const auto& cell = neighborhood.GetCenter();
+        if (!neighborhood.IsValid(cell.PlusY())) {
             return;
         }
 
-        if (automata.template SwapIfTargetIs<Air>(cell, cell.PlusY())) {
+        if (neighborhood.template SwapIfTargetIs<Air>(cell.PlusY())) {
             return;
         }
     }
@@ -97,13 +103,14 @@ struct Grass {
 
 };
 struct Water {
-    void Process(auto& automata, const Cell& cell) {
-        size_t nextY = cell.y + 1;
-        if (nextY >= automata.GetHeight()) {
+    void Process(auto& neighborhood) {
+        const auto& cell = neighborhood.GetCenter();
+        if (!neighborhood.IsValid(cell.PlusY())) {
             return;
         }
+        size_t nextY = cell.y + 1;
 
-        if (automata.template SwapIfTargetIs<Air>(cell, cell.PlusY())) {
+        if (neighborhood.template SwapIfTargetIs<Air>(cell.PlusY())) {
             return;
         }
 
@@ -114,21 +121,21 @@ struct Water {
             i++;
             size_t nextX = cell.x + i;
             size_t prevX = cell.x - i;
-            if (i > automata.GetWidth()) {
+            if (i > neighborhood.GetWidth()) {
                 return;
             }
-            if (nextX < automata.GetWidth() && !stopRight) {
-                if (automata.template SwapIfTargetIs<Air>(cell, {static_cast<ShortInt>(nextX), static_cast<ShortInt>(nextY)})) {
+            if (nextX < neighborhood.GetWidth() && !stopRight) {
+                if (neighborhood.template SwapIfTargetIs<Air>({static_cast<ShortInt>(nextX), static_cast<ShortInt>(nextY)})) {
                     return;
-                } else if (!automata.template IsAt<Water>({static_cast<ShortInt>(nextX), static_cast<ShortInt>(nextY)})) {
+                } else if (!neighborhood.template IsAt<Water>({static_cast<ShortInt>(nextX), static_cast<ShortInt>(nextY)})) {
                     stopRight = true;
                 }
             }
 
             if (prevX > 0 && !stopLeft) {
-                if (automata.template SwapIfTargetIs<Air>(cell, {static_cast<ShortInt>(prevX), static_cast<ShortInt>(nextY)})) {
+                if (neighborhood.template SwapIfTargetIs<Air>({static_cast<ShortInt>(prevX), static_cast<ShortInt>(nextY)})) {
                     return;
-                } else if (!automata.template IsAt<Water>({static_cast<ShortInt>(prevX), static_cast<ShortInt>(nextY)})) {
+                } else if (!neighborhood.template IsAt<Water>({static_cast<ShortInt>(prevX), static_cast<ShortInt>(nextY)})) {
                     stopLeft = true;
                 }
             }
@@ -138,10 +145,10 @@ struct Water {
 
 };
 struct Stone {
-    void Process(auto&, const Cell&) {}
+    void Process(auto&) {}
 };
 struct Fire {
-    void Process(auto&, const Cell&) {}
+    void Process(auto&) {}
 };
 
 enum class WorldType {
