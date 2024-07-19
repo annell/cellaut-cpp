@@ -10,18 +10,30 @@ struct Cell {
     ShortInt x = 0;
     ShortInt y = 0;
 
+    /**
+     * @brief Returns a new cell with the x value incremented by 1
+     */
     [[nodiscard]] Cell PlusY() const {
         return {x, static_cast<ShortInt>(y + 1)};
     }
 
+    /**
+     * @brief Returns a new cell with the y value decremented by 1
+     */
     [[nodiscard]] Cell MinusY() const {
         return {x, static_cast<ShortInt>(y - 1)};
     }
 
+    /**
+     * @brief Returns a new cell with the x value incremented by 1
+     */
     [[nodiscard]] Cell PlusX() const {
         return {static_cast<ShortInt>(x + 1), y};
     }
 
+    /**
+     * @brief Returns a new cell with the x value decremented by 1
+     */
     [[nodiscard]] Cell MinusX() const {
         return {static_cast<ShortInt>(x - 1), y};
     }
@@ -29,6 +41,12 @@ struct Cell {
     auto operator<=>(const Cell&) const = default;
 };
 
+/**
+ * @brief Concept that defines a state that can be processed,
+ * this is a requirement for the states added to the CellularAutomata.
+ * @tparam TState The state to be processed
+ * @tparam TNeighborhood The neighborhood of the state
+ */
 template <typename TState, typename TNeighborhood>
 concept State = requires(TState state, TNeighborhood neighborhood) {
     { state.Process(neighborhood) };
@@ -39,6 +57,11 @@ class CellularAutomata {
 private:
     using TAutomata = CellularAutomata<TStates...>;
 
+    /**
+     * @brief Represents the neighborhood of a cell, this is used to
+     * interact with the automata from within the states.
+     * Only exposes a simplified API towards the Automata.
+     */
     class Neighborhood {
     public:
         Neighborhood(const Cell& cell, TAutomata& automata) : centerCell(cell), automata(automata) {}
@@ -47,33 +70,70 @@ private:
         Neighborhood(Neighborhood&&) = delete;
         Neighborhood& operator=(Neighborhood&&) = delete;
 
+        /**
+         * @brief Returns the center cell of the neighborhood
+         * @return The center cell
+         */
+        [[nodiscard]]
         const Cell& GetCenter() const {
             return centerCell;
         }
 
+        /**
+         * @brief Sets the state of the center cell
+         * @tparam TState The state to set
+         */
         template<State<Neighborhood> TState>
         void Set() {
             automata.template Set<TState>(GetCenter());
         }
 
+        /**
+         * @brief Returns the state of the cell
+         * @tparam TState The state to check
+         * @param cell The cell to check
+         * @return True if the cell is of the state, false otherwise
+         */
         template<State<Neighborhood> TState>
         [[nodiscard]] bool IsAt(const Cell& cell) const {
             return automata.template IsAt<TState>(cell);
         }
 
+        /**
+         * @brief Checks if the cell is valid
+         * @param cell The cell to check
+         * @return True if the cell is valid, false otherwise
+         */
         [[nodiscard]] bool IsValid(const Cell& cell) const {
             return automata.IsValid(cell);
         }
 
+        /**
+         * @brief Swaps the state of the center cell with the target cell
+         * if the target cell is of the target state
+         * @tparam TTargetState The target state
+         * @param target The target cell
+         * @return True if the swap was successful, false otherwise
+         */
         template <State<Neighborhood> TTargetState>
         [[nodiscard]] bool SwapIfTargetIs(const Cell& target) {
             return automata.template SwapIfTargetIs<TTargetState>(GetCenter(), target);
         }
 
+        /**
+         * @brief Returns the width of the automata
+         * @return The width of the automata
+         */
+        [[nodiscard]]
        ShortInt GetWidth() const {
            return automata.GetWidth();
        }
 
+        /**
+         * @brief Returns the height of the automata
+         * @return The height of the automata
+         */
+       [[nodiscard]]
        ShortInt GetHeight() const {
            return automata.GetHeight();
        }
@@ -103,14 +163,26 @@ public:
         }
     }
 
+
+    /**
+     * @brief Returns the width of the automata
+     * @return The width of the automata
+     */
     [[nodiscard]] constexpr ShortInt GetWidth() const {
         return Width;
     }
 
+    /**
+     * @brief Returns the height of the automata
+     * @return The height of the automata
+     */
     [[nodiscard]] constexpr ShortInt GetHeight() const {
         return Height;
     }
 
+    /**
+     * @brief Steps the automata one step
+     */
     void Step() {
         for (const auto& cell : GetPassiveBuffer()) {
             std::visit([&](auto&& state){
@@ -121,11 +193,22 @@ public:
         Commit();
     }
 
+    /**
+     * @brief Checks if the cell is of the state
+     * @tparam TState The state to check
+     * @param cell The cell to check
+     * @return True if the cell is of the state, false otherwise
+     */
     template<State<Neighborhood> TState>
     [[nodiscard]] bool IsAt(const Cell& cell) const {
         return IsValid(cell) && std::get_if<TState>(&states.at(GetIndex(cell))) != nullptr;
     }
 
+    /**
+     * @brief Sets the state of the cell
+     * @tparam TState The state to set
+     * @param cell The cell to set the state of
+     */
     template<State<Neighborhood> TState>
     void Set(const Cell& cell) {
         updatedStates.at(GetIndex(cell)) = TState{};
@@ -149,6 +232,14 @@ public:
         }
     }
 
+    /**
+     * @brief Swaps the state of the from cell with the target cell
+     * if the target cell is of the target state
+     * @tparam TTargetState The target state
+     * @param from The from cell
+     * @param target The target cell
+     * @return True if the swap was successful, false otherwise
+     */
     template <State<Neighborhood> TTargetState>
     bool SwapIfTargetIs(const Cell& from, const Cell& target) {
         if (IsAt<TTargetState>(target)) {
@@ -168,6 +259,11 @@ public:
         return states.size();
     }
 
+    /**
+     * Checks if the cell is valid.
+     * @param cell The cell to check
+     * @return True if the cell is valid, false otherwise
+     */
     [[nodiscard]] bool IsValid(const Cell& cell) const {
         return cell.x >= 0 && cell.x < Width && cell.y >= 0 && cell.y < Height;
     }

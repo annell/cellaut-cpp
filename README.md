@@ -14,16 +14,18 @@ The cellular automata is very lightweight to use, the basic use case is:
 1. Setup the states for the cellular automata with some smart logic.
 ```c++
 class State1 {
-    void Process(auto& automata, const Cell& cell) {
-        if (automata.IsAt<State2>(cell.PlusY())) {
-            automata.Set<State1>(cell);
+    void Process(auto& neighborhood) {
+        const auto& cell = neighborhood.GetCenter();
+        if (neighborhood.IsAt<State2>(cell.PlusY())) {
+            neighborhood.Set<State1>();
         }
     }
 };
 class State2 {
-    void Process(auto& automata, const Cell& cell) {
+    void Process(auto& neighborhood) {
+        const auto& cell = neighborhood.GetCenter();
         if (automata.IsAt<State1>(cell.PlusX())) {
-            automata.Set<State2>(cell);
+            automata.Set<State2>();
         }
     }
 };
